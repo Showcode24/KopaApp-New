@@ -10,10 +10,10 @@ import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { Onboarding } from './screens/Onboarding';
 import { Register } from './screens/Register';
 import { SignIn } from './screens/SignIn';
-import { Home } from './screens/Home';
-
-import { COLORS } from './constants/theme';
 import { ForgotPassword } from './screens/ForgotPassword';
+import { COLORS } from './constants/theme';
+import { TabNavigator } from './navigation/TabNavigator';
+import HomeScreen from './screens/HomeScreen';
 
 // Firebase config
 const firebaseConfig = {
@@ -24,8 +24,6 @@ const firebaseConfig = {
   messagingSenderId: "905234000073",
   appId: "1:905234000073:web:b60d20360327b2caed4c6a",
 };
-
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -35,21 +33,28 @@ const Stack = createNativeStackNavigator();
 function RootStack({ isNewUser, user }: { isNewUser: boolean; user: User | null }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {isNewUser ? (
+      {isNewUser && (
         <>
           <Stack.Screen name="Onboarding" component={Onboarding} />
           <Stack.Screen name="Register" component={Register} />
         </>
-      ) : user ? (
-        <Stack.Screen name="Home" component={Home} />
-      ) : (
-        <Stack.Screen name="SignIn" component={SignIn} />
       )}
-      <Stack.Screen name="SignIn" component={SignIn} />
-      <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+      {!user && (
+        <>
+          <Stack.Screen name="SignIn" component={SignIn} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+        </>
+      )}
+      {user && (
+        <>
+        <Stack.Screen name="TabNavigator" component={TabNavigator} />
+        <Stack.Screen name="HomeScreen" component={HomeScreen} />        
+        </>
+      )}
     </Stack.Navigator>
   );
 }
+
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -60,18 +65,16 @@ export default function App() {
     const checkOnboardingStatus = async () => {
       try {
         const onboardingCompleted = await AsyncStorage.getItem('onboardingCompleted');
-        console.log('onboardingCompleted:', onboardingCompleted);
         setIsNewUser(onboardingCompleted !== 'true');
       } catch (error) {
         console.error('Error checking onboarding status:', error);
       }
     };
-    
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
-          setUser(firebaseUser); // firebaseUser is of type User
+          setUser(firebaseUser);
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           setIsNewUser(!userDoc.exists());
         } else {
@@ -80,12 +83,11 @@ export default function App() {
         }
       } catch (error) {
         console.error('Error in onAuthStateChanged:', error);
-        setIsNewUser(true); // Default to onboarding if error occurs
+        setIsNewUser(true);
       } finally {
         setIsLoading(false);
       }
     });
-    
 
     return () => unsubscribe();
   }, []);
@@ -99,13 +101,8 @@ export default function App() {
   }
 
   return (
-<NavigationContainer
-  onStateChange={(state) => {
-    console.log('Navigation State:', JSON.stringify(state, null, 2));
-  }}
->
-  <RootStack isNewUser={isNewUser} user={user} />
-</NavigationContainer>
-
+    <NavigationContainer>
+      <RootStack isNewUser={isNewUser} user={user} />
+    </NavigationContainer>
   );
 }

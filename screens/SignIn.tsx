@@ -1,13 +1,41 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Image, Alert } from 'react-native';
 import { TextInput, Text } from 'react-native-paper';
 import { COLORS, FONTS } from '../constants/theme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../constants/firebase';
 
 export const SignIn = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      navigation.navigate('HomeScreen');
+    } catch (error) {
+      Alert.alert('Error', (error as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+      navigation.navigate('Home');
+    } catch (error) {
+      Alert.alert('Error', (error as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -54,18 +82,18 @@ export const SignIn = ({ navigation }: any) => {
             <Text style={styles.forgotPassword}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button} onPress={() => {}}>
-            <Text style={styles.buttonText}>Login</Text>
+          <TouchableOpacity style={styles.button} onPress={handleSignIn} disabled={isLoading}>
+            <Text style={styles.buttonText}>{isLoading ? 'Signing in...' : 'Login'}</Text>
           </TouchableOpacity>
 
           <View style={styles.socialLogin}>
             <Text style={styles.orText}>Or login with</Text>
             <View style={styles.socialButtons}>
-              <TouchableOpacity style={styles.socialButton} onPress={() => {}}>
+              <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignIn} disabled={isLoading}>
                 <Icon name="google" size={20} color={COLORS.textSecondary} />
-                <Text style={styles.socialButtonText}>Google</Text>
+                <Text style={styles.socialButtonText}>{isLoading ? 'Signing in...' : 'Google'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton} onPress={() => {}}>
+              <TouchableOpacity style={styles.socialButton} onPress={() => {}} disabled={isLoading}>
                 <Icon name="facebook" size={20} color={COLORS.textSecondary} />
                 <Text style={styles.socialButtonText}>Facebook</Text>
               </TouchableOpacity>

@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Alert } from 'react-native';
 import { TextInput, Text, Checkbox } from 'react-native-paper';
 import { COLORS, FONTS } from '../constants/theme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../constants/firebase';
 
 export const Register = ({ navigation }: any) => {
   const [fullName, setFullName] = useState('');
@@ -11,8 +15,40 @@ export const Register = ({ navigation }: any) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isTutor, setIsTutor] = useState(false);
-  const [isParent, setIsParent] = useState(false);
+  const [userType, setUserType] = useState<'tutor' | 'parent' | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    if (!userType) {
+      Alert.alert('Error', 'Please select if you are a Tutor or a Parent');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      await setDoc(doc(db, 'users', user.uid), {
+        fullName,
+        email,
+        userType,
+        createdAt: new Date().toISOString(),
+      });
+
+      Alert.alert('Success', 'Registration successful!');
+      navigation.navigate('SignIn');
+    } catch (error) {
+      Alert.alert('Error', (error as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -96,24 +132,24 @@ export const Register = ({ navigation }: any) => {
           <View style={styles.checkboxContainer}>
             <View style={styles.checkboxWrapper}>
               <Checkbox
-                status={isTutor ? 'checked' : 'unchecked'}
-                onPress={() => setIsTutor(!isTutor)}
+                status={userType === 'tutor' ? 'checked' : 'unchecked'}
+                onPress={() => setUserType(userType === 'tutor' ? null : 'tutor')}
                 color={COLORS.accent}
               />
               <Text style={styles.checkboxLabel}>I'm a Tutor</Text>
             </View>
             <View style={styles.checkboxWrapper}>
               <Checkbox
-                status={isParent ? 'checked' : 'unchecked'}
-                onPress={() => setIsParent(!isParent)}
+                status={userType === 'parent' ? 'checked' : 'unchecked'}
+                onPress={() => setUserType(userType === 'parent' ? null : 'parent')}
                 color={COLORS.accent}
               />
               <Text style={styles.checkboxLabel}>I'm a Parent</Text>
             </View>
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={() => {}}>
-            <Text style={styles.buttonText}>Register</Text>
+          <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={isLoading}>
+            <Text style={styles.buttonText}>{isLoading ? 'Registering...' : 'Register'}</Text>
           </TouchableOpacity>
 
           <View style={styles.footer}>
